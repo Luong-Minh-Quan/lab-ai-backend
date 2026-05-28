@@ -1,24 +1,23 @@
 import express from 'express';
 import cors from 'cors';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import dotenv from 'dotenv';
-
-// Kích hoạt áo giáp đọc file .env
-dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Tự động lấy Key từ môi trường (An toàn tuyệt đối)
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Lấy Key từ két sắt bí mật của Render (TUYỆT ĐỐI KHÔNG GHI RÕ KEY Ở ĐÂY NỮA)
+const apiKey = process.env.GEMINI_API_KEY;
 
 app.post('/api/chat', async (req, res) => {
     try {
-        // Dùng ĐÚNG model 2.5 đã check
+        if (!apiKey) throw new Error("Chưa cấu hình GEMINI_API_KEY trên máy chủ!");
+        const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const { promptText } = req.body;
         
+        const { promptText } = req.body;
+        if (!promptText) return res.status(400).json({ success: false, error: "Thiếu câu hỏi" });
+
         const result = await model.generateContent(promptText);
         res.json({ success: true, result: result.response.text() });
     } catch (error) {
@@ -26,6 +25,6 @@ app.post('/api/chat', async (req, res) => {
     }
 });
 
-// Render.com sẽ tự cấp Port, nếu chạy Local thì dùng 3000
+// Cloud Render bắt buộc phải dùng cổng động (process.env.PORT)
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ AI Server chạy ở Port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ AI Server Cloud đang chạy ở Port ${PORT}`));
